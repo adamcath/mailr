@@ -1,0 +1,132 @@
+#!/usr/bin/env python
+
+import argparse
+import csv
+import tempfile
+import os
+import sys
+
+def fail(msg, errno):
+    sys.stderr.write(msg + "\n")
+    sys.exit(errno)
+
+
+def cli():
+    parser = argparse.ArgumentParser(description="Send builk emails")
+    subparsers = parser.add_subparsers()
+    
+    build_parser = subparsers.add_parser( 
+            "build", help="Create the emails but don't send them")
+    build_parser.add_argument(
+            "--subject", help="Subject line for all emails", required=True)
+    build_parser.add_argument(
+            "--from", help="From (use 'Name <address>' format)", required=True)
+    build_parser.add_argument(
+            "--to-field", help="Which column of data to use as the destination email (should be in Name <address> format)", required=True)
+    build_parser.add_argument(
+            "template", help="Template file (run `man` for syntax docs)")
+    build_parser.add_argument(
+            "csv", help="Data file in CSV format. Must have header row")
+    build_parser.set_defaults(func=build)
+    
+    send_parser = subparsers.add_parser(
+            "send", help="Send the emails that you built previously")
+    send_parser.set_defaults(func=send)
+
+    man_parser = subparsers.add_parser(
+            "man", help="Show manual, including template syntax")
+    man_parser.set_defaults(func=man)
+    
+    args = parser.parse_args()
+    args.func(args)
+
+def build(args):
+
+    # Create project dir
+    try:
+        os.mkdir("emails")
+    except Exception as e:
+        fail("Failed to create project directory './emails': " + str(e), 1)
+
+    # Read template
+    try:
+        template = open(args.template, "r").read()
+    except Exception as e:
+        fail("Failed to read template file: " + str(e), 2)
+
+    # Read data file
+    try:
+        csv_lines = open(args.csv, "r").readlines()
+    except Exception as e:
+        fail("Failed to read data file: " + str(e), 3)
+
+    # Parse CSV
+    try:
+        rows = list(csv.DictReader(csv_lines))
+    except Exception as e:
+        fail("Failed to parse CSV file: " + str(e), 4)
+
+    # Create each email
+    for i in range(len(rows)):
+        try:
+            email_buf = template.format(**rows[i])
+        except Exception as e:
+            fail("Template population failed at row %d: %s" % i, str(e))
+        email_filename = os.path.join("emails", str(i) + ".email")
+        try:
+            email_fd = open(email_filename, "w")
+            email_fd.write("From: " + vars(args)["from"] + "\n")
+            email_fd.write("Subject: " + args.subject + "\n")
+            email_fd.write("To: " + rows[i][args.to_field] + "\n\n")
+            email_fd.write(email_buf)
+            email_fd.close()
+        except Exception as e:
+            fail("Failed to write email " + email_filename + ": " + str(e), 5)
+
+def send(args):
+    try:
+        all_dirents = os.listdir("emails")
+    except Exception as e:
+        fail("Failed to load emails: " + str(e), 10)
+
+    dirents = filter(lambda name: name.endswith(".email"), all_dirents)
+    for dirent in dirents:
+        filename = os.path.join("emails", dirent)
+        if os.system("sendmail -vt < " + filename) != 0:
+            fail("Failed to send email " + filename, 11) 
+
+docs = '''mailr: A very simple builk emailer
+
+EMAIL ENGINE
+
+This tool depends on `postfix`. Which does ship by default on Mac OS, but
+doesn't seem to run by default. You can start it with `sudo postfix start`.
+
+To use your work email account, you need to configure postfix accordingly.
+Otherwise, we may be able to send mail here, but the email will appear as
+"suspicious" because it wasn't properly authenticated.
+
+Sending mail is asynchronous. Once you run this tool with `send`, the tools
+are enqueued for sending. You can monitor your email's "Sent Mail" folder
+to get confirmation of sending. If it doesn't happen within a few minutes, run
+`mailq` to see if there is a problem.
+
+TEMPLATE FILE SYNTAX
+
+The template file is interpeted as a python format string (documented at
+https://docs.python.org/2/library/string.html#formatstrings), and formatted
+once for each row of data.
+
+DATA FILE SYNTAX
+
+It's just CSV with a header row.
+'''
+
+def man(args):
+    docfile = tempfile.NamedTemporaryFile()
+    docfile.write(docs)
+    docfile.flush()
+    os.system("${PAGER:-less} " + docfile.name)
+    docfile.close()
+
+cli()
