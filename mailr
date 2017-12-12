@@ -24,7 +24,7 @@ def cli():
     build_parser.add_argument(
             "--to-field", help="Which column of data to use as the destination email (should be in Name <address> format)", required=True)
     build_parser.add_argument(
-            "template", help="Template file (run `man` for syntax docs)")
+            "template", help="Template file (see README for docs)")
     build_parser.add_argument(
             "csv", help="Data file in CSV format. Must have header row")
     build_parser.set_defaults(func=build)
@@ -33,10 +33,6 @@ def cli():
             "send", help="Send the emails that you built previously")
     send_parser.set_defaults(func=send)
 
-    man_parser = subparsers.add_parser(
-            "man", help="Show manual, including template syntax")
-    man_parser.set_defaults(func=man)
-    
     args = parser.parse_args()
     args.func(args)
 
@@ -94,39 +90,5 @@ def send(args):
         filename = os.path.join("emails", dirent)
         if os.system("sendmail -vt < " + filename) != 0:
             fail("Failed to send email " + filename, 11) 
-
-docs = '''mailr: A very simple builk emailer
-
-EMAIL ENGINE
-
-This tool depends on `postfix`. Which does ship by default on Mac OS, but
-doesn't seem to run by default. You can start it with `sudo postfix start`.
-
-To use your work email account, you need to configure postfix accordingly.
-Otherwise, we may be able to send mail here, but the email will appear as
-"suspicious" because it wasn't properly authenticated.
-
-Sending mail is asynchronous. Once you run this tool with `send`, the tools
-are enqueued for sending. You can monitor your email's "Sent Mail" folder
-to get confirmation of sending. If it doesn't happen within a few minutes, run
-`mailq` to see if there is a problem.
-
-TEMPLATE FILE SYNTAX
-
-The template file is interpeted as a python format string (documented at
-https://docs.python.org/2/library/string.html#formatstrings), and formatted
-once for each row of data.
-
-DATA FILE SYNTAX
-
-It's just CSV with a header row.
-'''
-
-def man(args):
-    docfile = tempfile.NamedTemporaryFile()
-    docfile.write(docs)
-    docfile.flush()
-    os.system("${PAGER:-less} " + docfile.name)
-    docfile.close()
 
 cli()
