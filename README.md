@@ -3,6 +3,83 @@
 This tool takes an email template and a data file and send bulk emails. Run
 `mailr help` to see usage.
 
+# Example
+
+Step 1: Write at template
+
+```
+Dear {name},
+
+How's it going? How is {child_name}?
+
+Well, talk to you soon {name}.
+
+Love,
+Me
+```
+
+Step 2: Create a data file
+
+```
+name,child_name,email
+Adam,Maxwell,Adam Cath <acath@somewhere.com>
+Stephanie,Maxwell,Stephanie Greer <steph@somewhere.com>
+```
+
+Step 3: Create emails
+
+```
+$ mailr build \
+    --subject "This is a test email" \
+    --from "Tester <tester@mailr.tool>" \
+    --to-field email \
+    template data.csv 
+```
+
+Step 4: Review emails
+
+```
+$ cat emails/*
+
+From: Tester <tester@mailr.tool>
+Subject: This is a test email
+To: Adam Cath <acath@somewhere.com>
+
+Dear Adam,
+
+How's it going? How is Maxwell?
+
+Well, talk to you soon Adam.
+
+Love,
+Me
+
+From: Tester <tester@mailr.tool>
+Subject: This is a test email
+To: Stephanie Greer <steph@somewhere.com>
+
+Dear Stephanie,
+
+How's it going? How is Maxwell?
+
+Well, talk to you soon Stephanie.
+
+Love,
+Me
+```
+
+Step 5: Send them
+
+```
+$ mailr send
+Mail Delivery Status Report will be mailed to <arc>.
+Mail Delivery Status Report will be mailed to <arc>.
+```
+
+Step 6: Make sure they went
+
+You can do this by reviewing your mail client's "Sent Mail" folder.
+
 # Email engine
 
 This tool depends on `sendmail`. On Mac OS, if this doesn't work by default,
