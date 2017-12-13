@@ -87,7 +87,7 @@ you can usually make it work with `sudo postfix start`.
 
 To use a real email account, you need to configure postfix accordingly.
 Otherwise, we may be able to send mail here, but the email will appear as
-"suspicious" because it wasn't properly authenticated.
+"suspicious" because it wasn't properly authenticated. [These instructions](https://gist.github.com/kany/c44c077881047ead8faa) worked for me.
 
 Sending mail is asynchronous. Once you run this tool with `send`, the mails 
 are enqueued for sending. You can monitor your email's "Sent Mail" folder
